@@ -50,6 +50,7 @@ nbclient @ file:///home/conda/feedstock_root/build_artifacts/nbclient_1602859080
 nbconvert @ file:///Users/runner/miniforge3/conda-bld/nbconvert_1605401854909/work
 nbformat @ file:///home/conda/feedstock_root/build_artifacts/nbformat_1602732862338/work
 nest-asyncio @ file:///home/conda/feedstock_root/build_artifacts/nest-asyncio_1605195931949/work
+newsapi==0.1.1
 notebook @ file:///Users/runner/miniforge3/conda-bld/notebook_1605103718226/work
 numpy @ file:///Users/runner/miniforge3/conda-bld/numpy_1604946192967/work
 olefile @ file:///home/conda/feedstock_root/build_artifacts/olefile_1602866521163/work

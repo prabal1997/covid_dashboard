@@ -2,10 +2,7 @@ import streamlit as st
 import urllib
 import os
 import pandas as pd
-import matplotlib.pyplot as plt
 import numpy as np
-import altair as alt
-from vega_datasets import data
 import altair as alt
 from vega_datasets import data
 import iso3166
@@ -60,7 +57,9 @@ def fetch_covid_data(DATA_URL="https://covid.ourworldindata.org/data/owid-covid-
     # load COVID data by country, continent
     covid_data = pd.read_csv(DATA_URL)
     covid_data["date"] = pd.to_datetime(covid_data["date"])
-
+    
+    # remove the 'World' location so as to not double-calculate any number
+    covid_data = covid_data.query("location != 'World'")
 
     map_covid_data = covid_data.groupby(["iso_code", "continent", "location"]).apply(calculate_map_stats).reset_index()
 
@@ -168,7 +167,7 @@ tooltip = [alt.Tooltip("location:N", title="Country"),
 countries = alt.topo_feature(data.world_110m.url, 'countries')
 foreground = alt.Chart(countries).mark_geoshape(stroke="white", strokeWidth=0.30
 ).encode(color=alt.Color('total_cases_smoothed_per_million:Q', 
-                        scale=alt.Scale(scheme="turbo", type="log"), title="Total Cases Per Million", legend=alt.Legend(orient="top")),
+                        scale=alt.Scale(scheme="turbo", type="log"), title="Total Cases Per Million", legend=alt.Legend(orient="left")),
          tooltip=tooltip,
 ).transform_lookup(
     lookup='id',
