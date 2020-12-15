@@ -1,11 +1,13 @@
 import streamlit as st
 import urllib
 import os
+import sys
 import pandas as pd
 import numpy as np
 import altair as alt
 from vega_datasets import data
 import iso3166
+import argparse
 
 CONTINENTS = ("World", "Asia", "North America", "South America", "Africa", "Europe", "Oceania",)
 CONTINENTS_EMOJI = ("🗺️", "🌏", "🌎", "🌎", "🌍", "🌍", "🌏",)
@@ -74,6 +76,21 @@ def fetch_covid_data(DATA_URL="https://covid.ourworldindata.org/data/owid-covid-
     linechart_covid_data = covid_data.groupby(["continent", "date"]).apply(calculate_linechart_stats).reset_index()
 
     return {"map": map_covid_data, "linechart": linechart_covid_data}
+
+# parse command line arguments to receive information about NEWS API key
+parser = argparse.ArgumentParser(description='This webapp serves as a simple COVID19 dashboard')
+
+parser.add_argument('--news_api_key', action="store", default="",
+                    help="Enter the key for using the News API")
+
+try:
+    args = parser.parse_args()
+except SystemExit as e:
+    # This exception will be raised if --help or invalid command line arguments
+    # are used. Currently streamlit prevents the program from exiting normally
+    # so we have to do a hard exit.
+    os._exit(e.code)
+NEWS_API_KEY = args.news_api_key
 
 # add a title
 st.title("🦠 Coronavirus Dashboard")
