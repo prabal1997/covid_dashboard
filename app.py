@@ -157,7 +157,7 @@ def cache_covid_news(covid_data_map_full,
 parser = argparse.ArgumentParser(description='This webapp serves as a simple COVID19 dashboard')
 
 parser.add_argument('--news_api_key', action="store", default="",
-                    help="Enter the key for using the News API")
+                    help="Enter the key for using the News API, or set the NEWS_API_KEY environment variable to hold the API key")
 
 try:
     args = parser.parse_args()
@@ -168,7 +168,8 @@ except SystemExit as e:
     os._exit(e.code)
 NEWS_API_KEY = args.news_api_key
 
-
+# try checking environment variables if the key is unavailable in command-line arguments
+NEWS_API_KEY = str(os.environ.get("NEWS_API_KEY")) if ((NEWS_API_KEY is None) or (NEWS_API_KEY=="")) else NEWS_API_KEY
 
 # add a title
 st.title("🦠 Coronavirus Dashboard")
