@@ -54,7 +54,7 @@ def calculate_map_stats(input_frame):
                         "total_deaths_smoothed_per_million" : input_frame["new_deaths_smoothed_per_million"].sum()})
 
 @st.cache
-def fetch_covid_data(DATA_URL="https://covid.ourworldindata.org/data/owid-covid-data.csv"):
+def fetch_covid_data(date, DATA_URL="https://covid.ourworldindata.org/data/owid-covid-data.csv"):
 
     # load COVID data by country, continent
     covid_data = pd.read_csv(DATA_URL)
@@ -172,6 +172,7 @@ NEWS_API_KEY = args.news_api_key
 NEWS_API_KEY = str(os.environ.get("NEWS_API_KEY")) if ((NEWS_API_KEY is None) or (NEWS_API_KEY=="")) else NEWS_API_KEY
 
 # add a title
+st.set_page_config(page_title="COVID19 Dashboard", page_icon="👾")
 st.title("🦠 Coronavirus Dashboard")
 
 # select a location
@@ -183,7 +184,9 @@ st.header("📈 Pandemic Trend")
 location_selectbox = st.selectbox("Please Choose a Region", selectbox_options)
 
 # fetch data relevant to the location, sort by date
-covid_data = fetch_covid_data()
+date_today = (pd.Timestamp.today()).strftime("%Y-%m-%d") 
+date_weekago = (pd.Timestamp.today() - pd.Timedelta("7d")).strftime("%Y-%m-%d")
+covid_data = fetch_covid_data(date_today)
 location = selectbox_option_to_location(location_selectbox)
 
 IS_WORLD = (location == "World")
@@ -230,7 +233,8 @@ y_smooth_axis = alt.Y('new_cases_smoothed:Q',
 # define the template for what the tooltip(s) will look like when a user hovers on the scatter points on the graph
 tooltip = [alt.Tooltip("new_cases:Q", title="New Cases", format=",r"),
            alt.Tooltip("new_deaths:Q", title="New Deaths", format=",r"),
-           alt.Tooltip("positive_rate:Q", title="Positivity Rate", format = ".3%")]
+           alt.Tooltip("positive_rate:Q", title="Positivity Rate", format = ".3%"),
+           alt.Tooltip("date:T", title="Date")]
 
 # make a scatter plot
 scatter_plot = alt.Chart(covid_data_linechart).mark_circle().encode(
