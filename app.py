@@ -8,7 +8,14 @@ from vega_datasets import data
 import iso3166
 import argparse
 from newsapi import NewsApiClient
+import datetime
+import time
 
+# set script timezone to UTC
+os.environ["TZ"] = "UTC"
+time.tzset()
+
+# define parameters, consts, values, to be used throughout the script
 CONTINENTS = ("World", "Asia", "North America", "South America", "Africa", "Europe", "Oceania",)
 CONTINENTS_EMOJI = ("🗺️", "🌏", "🌎", "🌎", "🌍", "🌍", "🌏",)
 
@@ -33,6 +40,16 @@ CONTINENTS_ROTATION = [
                         }]
 CONTINENTS_ROTATION = {key:params for key, params in zip(CONTINENTS, CONTINENTS_ROTATION)}
 
+SOCIAL_MEDIA_NAMES = ("Personal Website", "LinkedIn", "GitHub", "Twitter",)
+SOCIAL_MEDIA_IMAGE_URLS= {"Personal Website": "https://cdn1.iconfinder.com/data/icons/social-media-outline-6/128/SocialMedia_Website-Outline-512.png", 
+                            "LinkedIn": "https://cdn4.iconfinder.com/data/icons/social-brands-1/38/linkedin-social-media-profile-professional-512.png",
+                            "GitHub": "https://cdn2.iconfinder.com/data/icons/significon-social/512/Significon-Github-512.png",
+                            "Twitter": "https://cdn1.iconfinder.com/data/icons/social-media-outline-6/128/SocialMedia_Twitter-Outline-512.png"}
+SOCIAL_MEDIA_LINKS = {"Personal Website": "https://www.prabal.ca",
+                        "LinkedIn": "https://www.linkedin.com/in/prabal1997/",
+                        "GitHub": "https://github.com/prabal1997",
+                        "Twitter": "https://twitter.com/PrabalGuptaM"}
+
 # aggregate data to calculate required statistics across countries at present moment
 def calculate_linechart_stats(input_frame):
     def aggregate_rates_across_countries(input_rate, input_country_population):
@@ -48,16 +65,17 @@ def calculate_linechart_stats(input_frame):
                         "positive_rate" : aggregate_rates_across_countries(input_frame["positive_rate"], input_frame["population"])})
 
 def calculate_map_stats(input_frame):
-    return pd.Series({"total_cases_smoothed": np.round(input_frame["new_cases_smoothed"].sum()),
-                        "total_deaths_smoothed" : np.round(input_frame["new_deaths_smoothed"].sum()),
-                        "total_cases_smoothed_per_million" : input_frame["new_cases_smoothed_per_million"].sum(), 
-                        "total_deaths_smoothed_per_million" : input_frame["new_deaths_smoothed_per_million"].sum()})
+    return pd.Series({"total_cases": np.round(input_frame["new_cases"].sum()),
+                        "total_deaths" : np.round(input_frame["new_deaths"].sum()),
+                        "total_cases_per_million" : input_frame["new_cases_per_million"].sum(), 
+                        "total_deaths_per_million" : input_frame["new_deaths_per_million"].sum()})
 
 @st.cache
 def fetch_covid_data(date, DATA_URL="https://covid.ourworldindata.org/data/owid-covid-data.csv"):
 
     # load COVID data by country, continent
     covid_data = pd.read_csv(DATA_URL)
+    date = pd.to_datetime(date)
     covid_data["date"] = pd.to_datetime(covid_data["date"])
     
     # remove the 'World' location so as to not double-calculate any number
@@ -71,8 +89,7 @@ def fetch_covid_data(date, DATA_URL="https://covid.ourworldindata.org/data/owid-
     map_covid_data['id'] = map_covid_data['iso_code']
     map_covid_data['id'] = map_covid_data['id'].replace(alpha3_to_id)
     
-    # aggregate data to calculate required statistics since start of pandemic
-    
+    # aggregate data to calculate required statistics since start of pandemic    
     linechart_covid_data = covid_data.groupby(["continent", "date"]).apply(calculate_linechart_stats).reset_index()
 
     return {"map": map_covid_data, "linechart": linechart_covid_data}
@@ -171,8 +188,23 @@ NEWS_API_KEY = args.news_api_key
 # try checking environment variables if the key is unavailable in command-line arguments
 NEWS_API_KEY = str(os.environ.get("NEWS_API_KEY")) if ((NEWS_API_KEY is None) or (NEWS_API_KEY=="")) else NEWS_API_KEY
 
-# add a title
+# configure page title and icon
 st.set_page_config(page_title="COVID19 Dashboard", page_icon="👾")
+
+# add a navbar
+with st.beta_expander("🏠 Navigation", expanded=True):
+    st_cols = st.beta_columns(len(SOCIAL_MEDIA_NAMES))
+    for SOCIAL_MEDIA_NAME, st_col in zip(SOCIAL_MEDIA_NAMES, st_cols):
+        # "<h1 style='text-align: center; color: red;'>Some title</h1>"
+        st_col.markdown(f"""
+            <p style='text-align: center;'>
+            <a href="{SOCIAL_MEDIA_LINKS[SOCIAL_MEDIA_NAME]}">
+            <img src="{SOCIAL_MEDIA_IMAGE_URLS[SOCIAL_MEDIA_NAME]}" alt="My {SOCIAL_MEDIA_NAME}" height="24" width="24">
+            </a>
+            </p>
+        """, unsafe_allow_html=True)
+
+# show text tile
 st.title("🦠 Coronavirus Dashboard")
 
 # select a location
@@ -266,17 +298,17 @@ TOTAL_DEATHS_LABEL = "Total Deaths Per Million"
 chosen_metric = st.selectbox("Please Choose a Metric", (TOTAL_CASES_LABEL, TOTAL_DEATHS_LABEL,))
 
 if (chosen_metric == TOTAL_CASES_LABEL):
-    metric_column_name = "total_cases_smoothed_per_million"
+    metric_column_name = "total_cases_per_million"
     scale = "linear"    
 else:
-    metric_column_name = "total_deaths_smoothed_per_million"    
+    metric_column_name = "total_deaths_per_million"    
     scale = "linear"
 
 tooltip = [alt.Tooltip("location:N", title="Country"),
-           alt.Tooltip("total_cases_smoothed:Q", title="Total Cases", format=",r"),
-           alt.Tooltip("total_deaths_smoothed:Q", title="Total Deaths", format=",r"),
-           alt.Tooltip("total_cases_smoothed_per_million:Q", title="Total Cases Per Million", format=",r"), 
-           alt.Tooltip("total_deaths_smoothed_per_million:Q", title="Total Deaths Per Million", format=",r")]
+           alt.Tooltip("total_cases:Q", title="Total Cases", format=",r"),
+           alt.Tooltip("total_deaths:Q", title="Total Deaths", format=",r"),
+           alt.Tooltip("total_cases_per_million:Q", title="Total Cases Per Million", format=",r"), 
+           alt.Tooltip("total_deaths_per_million:Q", title="Total Deaths Per Million", format=",r")]
 
 countries = alt.topo_feature(data.world_110m.url, 'countries')
 foreground = alt.Chart(countries).mark_geoshape(stroke="white", strokeWidth=0.30
@@ -285,7 +317,7 @@ foreground = alt.Chart(countries).mark_geoshape(stroke="white", strokeWidth=0.30
                         tooltip=tooltip,
 ).transform_lookup(
     lookup='id',
-    from_=alt.LookupData(covid_data_map, 'id', ['total_cases_smoothed', 'total_deaths_smoothed', 'total_cases_smoothed_per_million', 'total_deaths_smoothed_per_million', 'continent', 'location'])
+    from_=alt.LookupData(covid_data_map, 'id', ['total_cases', 'total_deaths', 'total_cases_per_million', 'total_deaths_per_million', 'continent', 'location'])
 )
 
 final_map = (
@@ -326,3 +358,12 @@ if (len(news_articles)):
         if (title not in SHOWN_TITLES):
             show_news(title, url, author, news_agency, urlToImage)
             SHOWN_TITLES.add(title) 
+
+# show information about data source
+with st.beta_expander("ℹ️ Source"):
+    st.info(
+    '''
+    - All the data has been obtained from [Our World in Data](https://ourworldindata.org/coronavirus-data).
+    - Some visualizations are inspired from this [Analytics Vidhya](https://medium.com/analytics-vidhya/covid-19-interactive-dashboard-using-streamlit-altair-and-heroku-24d09072d52c) article.
+    - News is being searched for using the [News API](https://newsapi.org/)
+    ''')
